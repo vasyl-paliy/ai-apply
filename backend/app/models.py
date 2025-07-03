@@ -103,7 +103,7 @@ class JobPosting(Base):
     title = Column(String, nullable=False, index=True)
     company = Column(String, nullable=False, index=True)
     location = Column(String, index=True)
-    job_type = Column(SQLEnum(JobType))
+    job_type = Column(SQLEnum(JobType, values_callable=lambda x: [e.value for e in x]))
     
     # Job Details
     description = Column(Text)
