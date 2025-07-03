@@ -16,12 +16,31 @@ from .models import (
     JobApplication, ScrapingSession, SystemLog
 )
 from ..scrapers.linkedin_scraper import LinkedInScraper
-from ..scrapers.mock_scraper import MockScraper
+from ..scrapers.sync_mock_scraper import SyncMockScraper
 from ..scrapers.schema_scraper import SchemaScraper
 from ..scrapers.base_scraper import JobData
 from ..generators.cover_letter_generator import (
     CoverLetterGenerator, CoverLetterRequest
 )
+
+
+def convert_job_type_to_enum(job_type_str: str):
+    """Convert job type string to JobType enum."""
+    from .models import JobType
+    
+    if not job_type_str:
+        return JobType.FULL_TIME
+    
+    job_type_mapping = {
+        'full_time': JobType.FULL_TIME,
+        'part_time': JobType.PART_TIME,
+        'contract': JobType.CONTRACT,
+        'internship': JobType.INTERNSHIP,
+        'remote': JobType.REMOTE,
+        'hybrid': JobType.HYBRID
+    }
+    
+    return job_type_mapping.get(job_type_str.lower(), JobType.FULL_TIME)
 
 
 # Initialize Celery
@@ -151,7 +170,7 @@ def scrape_jobs_task(self, keywords: List[str], locations: List[str],
                                 benefits=job_data.benefits,
                                 salary_min=job_data.salary_min,
                                 salary_max=job_data.salary_max,
-                                job_type=job_data.job_type,
+                                job_type=convert_job_type_to_enum(job_data.job_type),
                                 source=job_data.source,
                                 external_id=job_data.external_id,
                                 external_url=job_data.external_url,
@@ -178,25 +197,28 @@ def scrape_jobs_task(self, keywords: List[str], locations: List[str],
             if "mock" in sources:
                 try:
                     logger.info("Starting mock scraping...")
-                    # Mock scraper doesn't need async event loop
-                    scraper = MockScraper()
-                    logger.info("MockScraper created, calling search_jobs directly...")
-                    mock_jobs = loop.run_until_complete(scraper.search_jobs(
+                    # Use synchronous mock scraper
+                    scraper = SyncMockScraper()
+                    logger.info("SyncMockScraper created, calling search_jobs directly...")
+                    mock_jobs = scraper.search_jobs(
                         keywords=keywords,
                         locations=locations,
                         max_results=max_results
-                    ))
+                    )
                     logger.info(f"Mock scraping completed, got {len(mock_jobs)} jobs")
                     
                     # Save jobs to database
+                    logger.info(f"Processing {len(mock_jobs)} mock jobs for database storage...")
                     new_jobs = 0
-                    for job_data in mock_jobs:
+                    for i, job_data in enumerate(mock_jobs):
+                        logger.info(f"Processing job {i+1}: {job_data.title} at {job_data.company}")
                         existing_job = db.query(JobPosting).filter(
                             JobPosting.external_id == job_data.external_id,
                             JobPosting.source == job_data.source
                         ).first()
                         
                         if not existing_job:
+                            logger.info(f"Creating new job posting for {job_data.external_id}")
                             job_posting = JobPosting(
                                 title=job_data.title,
                                 company=job_data.company,
@@ -206,7 +228,7 @@ def scrape_jobs_task(self, keywords: List[str], locations: List[str],
                                 benefits=job_data.benefits,
                                 salary_min=job_data.salary_min,
                                 salary_max=job_data.salary_max,
-                                job_type=job_data.job_type,
+                                job_type=convert_job_type_to_enum(job_data.job_type),
                                 source=job_data.source,
                                 external_id=job_data.external_id,
                                 external_url=job_data.external_url,
@@ -217,11 +239,18 @@ def scrape_jobs_task(self, keywords: List[str], locations: List[str],
                             db.add(job_posting)
                             new_jobs += 1
                             all_jobs.append(job_posting)
+                            logger.info(f"Added job {i+1} to database")
+                        else:
+                            logger.info(f"Job {job_data.external_id} already exists, skipping")
                     
                     # Commit jobs to get IDs
                     if new_jobs > 0:
+                        logger.info(f"Committing {new_jobs} new jobs to database...")
                         db.commit()
                         db.refresh(session)  # Refresh session to get updated data
+                        logger.info("Jobs committed successfully")
+                    else:
+                        logger.info("No new jobs to commit")
                     
                     logger.info(f"Mock scraping: {len(mock_jobs)} found, {new_jobs} new")
                     
@@ -260,7 +289,7 @@ def scrape_jobs_task(self, keywords: List[str], locations: List[str],
                                 benefits=job_data.benefits,
                                 salary_min=job_data.salary_min,
                                 salary_max=job_data.salary_max,
-                                job_type=job_data.job_type,
+                                job_type=convert_job_type_to_enum(job_data.job_type),
                                 source=job_data.source,
                                 external_id=job_data.external_id,
                                 external_url=job_data.external_url,
