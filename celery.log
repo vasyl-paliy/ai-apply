@@ -1,0 +1,42 @@
+Usage: python -m celery [OPTIONS] COMMAND [ARGS]...
+Try 'python -m celery --help' for help.
+
+Error: Invalid value for '-A' / '--app': 
+Unable to load celery application.
+While trying to load the module app.worker the following error occurred:
+Traceback (most recent call last):
+  File "/Users/vasylpaliy/Library/Python/3.9/lib/python/site-packages/celery/bin/celery.py", line 58, in convert
+    return find_app(value)
+  File "/Users/vasylpaliy/Library/Python/3.9/lib/python/site-packages/celery/app/utils.py", line 386, in find_app
+    sym = imp(app)
+  File "/Users/vasylpaliy/Library/Python/3.9/lib/python/site-packages/celery/utils/imports.py", line 104, in import_from_cwd
+    return imp(module, package=package)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1030, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 986, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 680, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 850, in exec_module
+  File "<frozen importlib._bootstrap>", line 228, in _call_with_frames_removed
+  File "/Users/vasylpaliy/projects/job-hunt/backend/app/worker.py", line 12, in <module>
+    from .config import settings
+  File "/Users/vasylpaliy/projects/job-hunt/backend/app/config.py", line 137, in <module>
+    settings = get_settings()
+  File "/Users/vasylpaliy/projects/job-hunt/backend/app/config.py", line 133, in get_settings
+    return Settings()
+  File "/Users/vasylpaliy/Library/Python/3.9/lib/python/site-packages/pydantic_settings/main.py", line 71, in __init__
+    super().__init__(
+  File "/Users/vasylpaliy/Library/Python/3.9/lib/python/site-packages/pydantic/main.py", line 164, in __init__
+    __pydantic_self__.__pydantic_validator__.validate_python(data, self_instance=__pydantic_self__)
+pydantic_core._pydantic_core.ValidationError: 3 validation errors for Settings
+database_url
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.5/v/missing
+openai_api_key
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.5/v/missing
+secret_key
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.5/v/missing
+
